@@ -1,0 +1,129 @@
+name: remote-build
+run-name: "Build on ${{ github.event.inputs.platform }} for cache ${{ vars.CACHIX_CACHE }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Target platform"
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - x86_64-linux
+          - aarch64-linux
+          - x86_64-darwin
+          - aarch64-darwin
+      build_cmd:
+        description: "Nix build command"
+        type: string
+        required: true
+        default: "nix build .#default --print-out-paths"
+      use_watch_exec:
+        description: "Wrap build with cachix watch-exec"
+        type: boolean
+        required: true
+        default: true
+
+env:
+  # Set in: Repo → Settings → Secrets and variables → Actions → Variables
+  # Example value: olde
+  CACHIX_CACHE: ${{ vars.CACHIX_CACHE }}
+
+jobs:
+  linux-x86_64:
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'x86_64-linux' }}
+    name: "x86_64-linux • ${{ vars.CACHIX_CACHE }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+      - uses: cachix/cachix-action@v14
+        with:
+          name: ${{ vars.CACHIX_CACHE }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Build and upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.inputs.use_watch_exec }}" == "true" ]]; then
+            cachix watch-exec "${CACHIX_CACHE}" -- bash -lc "${{ github.event.inputs.build_cmd }}"
+          else
+            bash -lc "${{ github.event.inputs.build_cmd }}"
+          fi
+
+  linux-aarch64:
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'aarch64-linux' }}
+    name: "aarch64-linux • ${{ vars.CACHIX_CACHE }}"
+    runs-on: buildjet-2vcpu-ubuntu-2204-arm64 # 或自托管: [self-hosted, linux, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+      - uses: cachix/cachix-action@v14
+        with:
+          name: ${{ vars.CACHIX_CACHE }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Build and upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.inputs.use_watch_exec }}" == "true" ]]; then
+            cachix watch-exec "${CACHIX_CACHE}" -- bash -lc "${{ github.event.inputs.build_cmd }}"
+          else
+            bash -lc "${{ github.event.inputs.build_cmd }}"
+          fi
+
+  darwin-x86_64:
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'x86_64-darwin' }}
+    name: "x86_64-darwin • ${{ vars.CACHIX_CACHE }}"
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+      - uses: cachix/cachix-action@v14
+        with:
+          name: ${{ vars.CACHIX_CACHE }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Build and upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.inputs.use_watch_exec }}" == "true" ]]; then
+            cachix watch-exec "${CACHIX_CACHE}" -- bash -lc "${{ github.event.inputs.build_cmd }}"
+          else
+            bash -lc "${{ github.event.inputs.build_cmd }}"
+          fi
+
+  darwin-arm64:
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'aarch64-darwin' }}
+    name: "aarch64-darwin • ${{ vars.CACHIX_CACHE }}"
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+      - uses: cachix/cachix-action@v14
+        with:
+          name: ${{ vars.CACHIX_CACHE }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Build and upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.inputs.use_watch_exec }}" == "true" ]]; then
+            cachix watch-exec "${CACHIX_CACHE}" -- bash -lc "${{ github.event.inputs.build_cmd }}"
+          else
+            bash -lc "${{ github.event.inputs.build_cmd }}"
+          fi
